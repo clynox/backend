@@ -3,9 +3,10 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-async function main() {
-  // First, delete all existing data in the correct order
+async function cleanup() {
   console.log("Cleaning up existing data...");
+
+  // Delete in order of dependencies
   await prisma.submission.deleteMany({});
   await prisma.assignment.deleteMany({});
   await prisma.subject.deleteMany({});
@@ -16,17 +17,21 @@ async function main() {
   await prisma.teacher.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.school.deleteMany({});
+}
+
+async function main() {
+  await cleanup();
 
   console.log("Starting to seed new data...");
 
-  const schools = [
-    { name: "Delhi Public School", domain: "dps-school" },
-    { name: "Kendriya Vidyalaya", domain: "kv-school" },
-  ];
-
-  const grades = ["IX", "X", "XI", "XII"];
-  const sections = ["A", "B", "C"];
-  const currentYear = new Date().getFullYear().toString();
+  // Create System School first
+  const systemSchool = await prisma.school.create({
+    data: {
+      name: "System",
+      domain: "system-school",
+      contactEmail: "system@admin.com",
+    },
+  });
 
   // Create Super Admin
   const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || "admin@system.com";
@@ -39,12 +44,21 @@ async function main() {
       email: superAdminEmail,
       password: hashedPassword,
       role: UserRole.SUPER_ADMIN,
-      schoolId: "",
+      schoolId: systemSchool.id,
       isActive: true,
     },
   });
 
   console.log("Created Super Admin:", superAdmin.email);
+
+  const schools = [
+    { name: "Delhi Public School", domain: "dps-school" },
+    { name: "Kendriya Vidyalaya", domain: "kv-school" },
+  ];
+
+  const grades = ["IX", "X", "XI", "XII"];
+  const sections = ["A", "B", "C"];
+  const currentYear = new Date().getFullYear().toString();
 
   for (const school of schools) {
     console.log(`Creating school: ${school.name}`);
