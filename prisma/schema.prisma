@@ -10,101 +10,210 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model School {
-  id        String   @id @default(cuid())
-  name      String
-  domain    String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum UserRole {
+  SUPER_ADMIN
+  SCHOOL_ADMIN
+  TEACHER
+  STUDENT
+}
 
-  teachers    Teacher[]
-  students    Student[]
-  classes     Class[]
-  assignments Assignment[]
+model School {
+  id                    String    @id @default(cuid())
+  name                  String
+  domain                String    @unique
+  logo                  String?   // URL to school logo
+  address               String?
+  contactEmail          String?
+  contactPhone          String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  users                 User[]
+  teachers              Teacher[]
+  students              Student[]
+  classes               Class[]
+  subjects              Subject[]
+  assignments           Assignment[]
+  attendanceRecords     AttendanceRecord[]
+}
+
+model User {
+  id                    String    @id @default(cuid())
+  email                 String
+  password              String    // Hashed password
+  role                  UserRole
+  schoolId              String
+  isActive              Boolean   @default(true)
+  lastLoginAt           DateTime?
+  refreshToken          String?   // For JWT refresh token
+  passwordResetToken    String?
+  passwordResetExpires  DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  school                School    @relation(fields: [schoolId], references: [id])
+  teacher               Teacher?
+  student               Student?
+  attendanceRecords     AttendanceRecord[]
+
+  @@unique([email, schoolId])
+  @@index([email, schoolId])
 }
 
 model Teacher {
-  id        String   @id @default(cuid())
-  name      String
-  email     String
-  schoolId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  schoolId              String
+  name                  String
+  employeeId            String?
+  specialization        String?
+  joiningDate           DateTime  @default(now())
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  school      School       @relation(fields: [schoolId], references: [id])
-  classes     Class[]
-  assignments Assignment[]
+  user                  User      @relation(fields: [userId], references: [id])
+  school                School    @relation(fields: [schoolId], references: [id])
+  classTeacher          Class[]   @relation("ClassTeacher")
+  subjects              Subject[]
+  assignments           Assignment[]
+  attendanceRecords     AttendanceRecord[]
 
-  @@unique([email, schoolId])
+  @@unique([employeeId, schoolId])
 }
 
 model Student {
-  id        String   @id @default(cuid())
-  name      String
-  email     String
-  schoolId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  schoolId              String
+  name                  String
+  rollNumber            String?
+  dateOfBirth          DateTime?
+  grade                 String?
+  section              String?
+  parentEmail          String?
+  parentPhone          String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  school       School            @relation(fields: [schoolId], references: [id])
-  enrollments  ClassEnrollment[]
-  submissions  Submission[]
+  user                 User      @relation(fields: [userId], references: [id])
+  school               School    @relation(fields: [schoolId], references: [id])
+  enrollments          ClassEnrollment[]
+  submissions          Submission[]
+  attendanceRecords    AttendanceRecord[]
 
-  @@unique([email, schoolId])
+  @@unique([rollNumber, schoolId])
 }
 
 model Class {
-  id        String   @id @default(cuid())
-  name      String
-  schoolId  String
-  teacherId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String    @id @default(cuid())
+  name                 String
+  grade                String
+  section              String
+  schoolId             String
+  classTeacherId       String
+  academicYear         String
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  school      School            @relation(fields: [schoolId], references: [id])
-  teacher     Teacher           @relation(fields: [teacherId], references: [id])
-  enrollments ClassEnrollment[]
-  assignments Assignment[]
+  school               School    @relation(fields: [schoolId], references: [id])
+  classTeacher         Teacher   @relation("ClassTeacher", fields: [classTeacherId], references: [id])
+  enrollments          ClassEnrollment[]
+  subjects             Subject[]
+  assignments          Assignment[]
+  attendanceRecords    AttendanceRecord[]
+
+  @@unique([grade, section, academicYear, schoolId])
+}
+
+model Subject {
+  id                   String    @id @default(cuid())
+  name                 String
+  code                 String?
+  schoolId             String
+  teacherId            String
+  classId              String
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  school               School    @relation(fields: [schoolId], references: [id])
+  teacher              Teacher   @relation(fields: [teacherId], references: [id])
+  class                Class     @relation(fields: [classId], references: [id])
+  assignments          Assignment[]
+
+  @@unique([code, schoolId])
 }
 
 model ClassEnrollment {
-  id        String   @id @default(cuid())
-  classId   String
-  studentId String
-  createdAt DateTime @default(now())
+  id                   String    @id @default(cuid())
+  classId              String
+  studentId            String
+  enrollmentDate       DateTime  @default(now())
+  status               String    @default("ACTIVE") // ACTIVE, INACTIVE, TRANSFERRED
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  class   Class   @relation(fields: [classId], references: [id])
-  student Student @relation(fields: [studentId], references: [id])
+  class                Class     @relation(fields: [classId], references: [id])
+  student              Student   @relation(fields: [studentId], references: [id])
 
   @@unique([classId, studentId])
 }
 
 model Assignment {
-  id          String   @id @default(cuid())
-  title       String
-  description String
-  dueDate     DateTime
-  schoolId    String
-  teacherId   String
-  classId     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                   String    @id @default(cuid())
+  title                String
+  description          String
+  dueDate              DateTime
+  schoolId             String
+  teacherId            String
+  classId              String
+  subjectId            String
+  maxScore             Float?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  school      School       @relation(fields: [schoolId], references: [id])
-  teacher     Teacher      @relation(fields: [teacherId], references: [id])
-  class       Class        @relation(fields: [classId], references: [id])
-  submissions Submission[]
+  school               School    @relation(fields: [schoolId], references: [id])
+  teacher              Teacher   @relation(fields: [teacherId], references: [id])
+  class                Class     @relation(fields: [classId], references: [id])
+  subject              Subject   @relation(fields: [subjectId], references: [id])
+  submissions          Submission[]
 }
 
 model Submission {
-  id           String   @id @default(cuid())
-  content      String
-  assignmentId String
-  studentId    String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                   String    @id @default(cuid())
+  assignmentId         String
+  studentId            String
+  content              String    // Could be a URL to uploaded file
+  score                Float?
+  feedback             String?
+  submittedAt          DateTime  @default(now())
+  gradedAt             DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  assignment Assignment @relation(fields: [assignmentId], references: [id])
-  student    Student    @relation(fields: [studentId], references: [id])
+  assignment           Assignment @relation(fields: [assignmentId], references: [id])
+  student              Student    @relation(fields: [studentId], references: [id])
+}
+
+model AttendanceRecord {
+  id                   String    @id @default(cuid())
+  schoolId             String
+  userId               String
+  classId              String?
+  teacherId            String?
+  studentId            String?
+  date                 DateTime
+  status               String    // PRESENT, ABSENT, LATE
+  remarks              String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  school               School    @relation(fields: [schoolId], references: [id])
+  user                 User      @relation(fields: [userId], references: [id])
+  class                Class?    @relation(fields: [classId], references: [id])
+  teacher              Teacher?  @relation(fields: [teacherId], references: [id])
+  student              Student?  @relation(fields: [studentId], references: [id])
+
+  @@unique([userId, date])
+  @@index([date, schoolId])
 }
 

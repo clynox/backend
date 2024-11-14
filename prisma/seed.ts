@@ -1,44 +1,107 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, UserRole } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  // First, delete all existing data in the correct order
+  console.log("Cleaning up existing data...");
+  await prisma.submission.deleteMany({});
+  await prisma.assignment.deleteMany({});
+  await prisma.subject.deleteMany({});
+  await prisma.classEnrollment.deleteMany({});
+  await prisma.attendanceRecord.deleteMany({});
+  await prisma.class.deleteMany({});
+  await prisma.student.deleteMany({});
+  await prisma.teacher.deleteMany({});
+  await prisma.user.deleteMany({});
+  await prisma.school.deleteMany({});
+
+  console.log("Starting to seed new data...");
+
   const schools = [
-    { name: "School A", domain: "schoola" },
-    { name: "School B", domain: "schoolb" },
-    { name: "School C", domain: "schoolc" },
-    { name: "School D", domain: "schoold" },
-    { name: "School E", domain: "schoole" },
+    { name: "Delhi Public School", domain: "dps-school" },
+    { name: "Kendriya Vidyalaya", domain: "kv-school" },
   ];
 
+  const grades = ["IX", "X", "XI", "XII"];
+  const sections = ["A", "B", "C"];
+  const currentYear = new Date().getFullYear().toString();
+
   for (const school of schools) {
-    // First, create the school
+    console.log(`Creating school: ${school.name}`);
+
     const createdSchool = await prisma.school.create({
       data: {
         name: school.name,
         domain: school.domain,
+        contactEmail: `contact@${school.domain}.edu`,
+        contactPhone: "+91-1234567890",
       },
     });
 
-    // Then, create the teacher with the school ID
-    const teacher = await prisma.teacher.create({
-      data: {
-        name: `Demo Teacher`,
-        email: `teacher@${school.domain}.com`,
-        schoolId: createdSchool.id,
-      },
+    // Create teachers
+    for (let i = 0; i < 5; i++) {
+      const teacherEmail = `teacher${i + 1}@${school.domain}.edu`;
+      const hashedPassword = await bcrypt.hash("password123", 10);
+
+      // Create user first
+      const user = await prisma.user.create({
+        data: {
+          email: teacherEmail,
+          password: hashedPassword,
+          role: UserRole.TEACHER,
+          schoolId: createdSchool.id,
+        },
+      });
+
+      // Then create teacher profile
+      await prisma.teacher.create({
+        data: {
+          userId: user.id,
+          schoolId: createdSchool.id,
+          name: `Teacher ${i + 1}`,
+          employeeId: `EMP${i + 1}`,
+          specialization: "Mathematics",
+        },
+      });
+    }
+
+    // Create classes and subjects
+    const teachers = await prisma.teacher.findMany({
+      where: { schoolId: createdSchool.id },
     });
 
-    // Finally, create the class
-    await prisma.class.create({
-      data: {
-        name: "Demo Class",
-        schoolId: createdSchool.id,
-        teacherId: teacher.id,
-      },
-    });
+    for (const grade of grades) {
+      for (const section of sections) {
+        const teacher = teachers[Math.floor(Math.random() * teachers.length)];
 
-    console.log(`Created ${school.name} with ID: ${createdSchool.id}`);
+        const class_ = await prisma.class.create({
+          data: {
+            name: `Class ${grade}-${section}`,
+            grade,
+            section,
+            academicYear: currentYear,
+            schoolId: createdSchool.id,
+            classTeacherId: teacher.id,
+          },
+        });
+
+        // Create subjects for the class
+        const subjects = ["Mathematics", "Science", "English", "History"];
+        for (const subjectName of subjects) {
+          await prisma.subject.create({
+            data: {
+              name: subjectName,
+              code: `${grade}${section}-${subjectName.substring(0, 3)}`,
+              schoolId: createdSchool.id,
+              teacherId: teacher.id,
+              classId: class_.id,
+            },
+          });
+        }
+      }
+    }
   }
 }
 

@@ -19,14 +19,18 @@ router.get(
             select: {
               id: true,
               name: true,
-              email: true,
+              user: {
+                select: {
+                  email: true,
+                },
+              },
             },
           },
           classes: {
             select: {
               id: true,
               name: true,
-              teacher: {
+              classTeacher: {
                 select: {
                   id: true,
                   name: true,
@@ -64,7 +68,7 @@ router.get(
         select: {
           id: true,
           name: true,
-          teacher: {
+          classTeacher: {
             select: {
               id: true,
               name: true,

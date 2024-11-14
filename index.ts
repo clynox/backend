@@ -1,19 +1,20 @@
 import express from "express";
+import cookieParser from "cookie-parser";
+import authRouter from "./src/routes/auth.routes";
 import dataRouter from "./src/routes/data.routes";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(cookieParser());
 
-// Enable subdomain handling
 app.set("trust proxy", true);
-app.set("subdomain offset", 1); // Adjust based on your domain structure
+app.set("subdomain offset", 1);
 
-// Public API routes
+app.use("/auth", authRouter);
 app.use("/data", dataRouter);
 
-// Health check endpoint
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
