@@ -23,7 +23,7 @@ export class AuthService {
   private static generateTokens(
     userId: string,
     role: UserRole,
-    schoolId: string | null
+    schoolId: string
   ) {
     const token = jwt.sign({ userId, role, schoolId }, AUTH_CONFIG.jwtSecret, {
       expiresIn: AUTH_CONFIG.tokenExpiration,
@@ -82,7 +82,7 @@ export class AuthService {
     const { token, refreshToken } = this.generateTokens(
       user.id,
       user.role,
-      user.schoolId || ""
+      user.schoolId
     );
 
     await prisma.user.update({
@@ -121,7 +121,7 @@ export class AuthService {
     const { token, refreshToken } = this.generateTokens(
       user.id,
       user.role,
-      user.schoolId || ""
+      user.schoolId
     );
 
     await prisma.user.update({
