@@ -45,6 +45,28 @@ export const authMiddleware = async (
       return;
     }
 
+    if (req.path.startsWith("/super-admin")) {
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        include: { teacher: true, student: true },
+      });
+
+      if (!user) {
+        res.status(401).json({ message: "User not found" });
+        return;
+      }
+
+      req.user = {
+        id: user.id,
+        role: user.role,
+        schoolId: user.schoolId,
+        email: user.email,
+        name: user.teacher?.name || user.student?.name,
+      };
+
+      return next();
+    }
+
     if (!req.school?.id) {
       res.status(500).json({ message: "School context not available" });
       return;
@@ -56,13 +78,8 @@ export const authMiddleware = async (
     }
 
     const user = await prisma.user.findUnique({
-      where: {
-        id: decoded.userId,
-      },
-      include: {
-        teacher: true,
-        student: true,
-      },
+      where: { id: decoded.userId },
+      include: { teacher: true, student: true },
     });
 
     if (!user) {
