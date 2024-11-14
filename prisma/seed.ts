@@ -24,16 +24,7 @@ async function main() {
 
   console.log("Starting to seed new data...");
 
-  // Create System School first
-  const systemSchool = await prisma.school.create({
-    data: {
-      name: "System",
-      domain: "system-school",
-      contactEmail: "system@admin.com",
-    },
-  });
-
-  // Create Super Admin
+  // Create Super Admin without school
   const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || "admin@system.com";
   const superAdminPassword =
     process.env.SUPER_ADMIN_PASSWORD || "adminpassword";
@@ -44,7 +35,6 @@ async function main() {
       email: superAdminEmail,
       password: hashedPassword,
       role: UserRole.SUPER_ADMIN,
-      schoolId: systemSchool.id,
       isActive: true,
     },
   });

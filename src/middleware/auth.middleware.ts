@@ -75,7 +75,7 @@ export const authMiddleware = async (
     req.user = {
       id: user.id,
       role: user.role,
-      schoolId: user.schoolId,
+      schoolId: user.schoolId || "",
       email: user.email,
       name: user.teacher?.name || user.student?.name,
     };
