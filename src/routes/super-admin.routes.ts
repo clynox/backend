@@ -7,10 +7,11 @@ import { superAdminController } from "../controllers/super-admin.controller";
 
 const router = Router();
 
+router.use(authMiddleware);
+router.use(superAdminMiddleware);
+
 router.post(
   "/schools",
-  authMiddleware,
-  superAdminMiddleware,
   [
     body("name").notEmpty().withMessage("School name is required"),
     body("domain")
@@ -26,24 +27,11 @@ router.post(
   superAdminController.createSchool
 );
 
-router.get(
-  "/schools",
-  authMiddleware,
-  superAdminMiddleware,
-  superAdminController.listSchools
-);
-
-router.get(
-  "/schools/:id",
-  authMiddleware,
-  superAdminMiddleware,
-  superAdminController.getSchool
-);
+router.get("/schools", superAdminController.listSchools);
+router.get("/schools/:id", superAdminController.getSchool);
 
 router.put(
   "/schools/:id",
-  authMiddleware,
-  superAdminMiddleware,
   [
     body("name").optional(),
     body("domain")
@@ -58,11 +46,6 @@ router.put(
   superAdminController.updateSchool
 );
 
-router.delete(
-  "/schools/:id",
-  authMiddleware,
-  superAdminMiddleware,
-  superAdminController.deleteSchool
-);
+router.delete("/schools/:id", superAdminController.deleteSchool);
 
 export default router;
