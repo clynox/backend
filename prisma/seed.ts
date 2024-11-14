@@ -28,6 +28,24 @@ async function main() {
   const sections = ["A", "B", "C"];
   const currentYear = new Date().getFullYear().toString();
 
+  // Create Super Admin
+  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || "admin@system.com";
+  const superAdminPassword =
+    process.env.SUPER_ADMIN_PASSWORD || "adminpassword";
+  const hashedPassword = await bcrypt.hash(superAdminPassword, 10);
+
+  const superAdmin = await prisma.user.create({
+    data: {
+      email: superAdminEmail,
+      password: hashedPassword,
+      role: UserRole.SUPER_ADMIN,
+      schoolId: "",
+      isActive: true,
+    },
+  });
+
+  console.log("Created Super Admin:", superAdmin.email);
+
   for (const school of schools) {
     console.log(`Creating school: ${school.name}`);
 
